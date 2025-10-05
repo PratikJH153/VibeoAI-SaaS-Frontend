@@ -1,0 +1,32 @@
+[
+  {
+    "speaker": "A",
+    "name": null,
+    "demographics": null
+  },
+  {
+    "speaker": "B",
+    "name": "Barbara",
+    "demographics": "Based in Chicago; independent researcher and moderator of the focus group."
+  },
+  {
+    "speaker": "C",
+    "name": "Vivian",
+    "demographics": "25 years old, lives in Burbank, California (Los Angeles area); works as an interpreter for the deaf and hard of hearing."
+  },
+  {
+    "speaker": "D",
+    "name": "Christopher",
+    "demographics": "Lives in San Francisco; works in education as a school counselor."
+  },
+  {
+    "speaker": "E",
+    "name": "Cordero",
+    "demographics": "Located in Chicago; works as a finance director at TransUnion, specializing in corporate finance, budgeting, forecasting, and reporting."
+  },
+  {
+    "speaker": "F",
+    "name": "Alison",
+    "demographics": "Lives in Atlanta; works in the project management space with almost nine years of industry experience."
+  }
+]

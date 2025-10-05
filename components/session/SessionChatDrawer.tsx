@@ -1,0 +1,183 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+} from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { MessageSquare } from "lucide-react";
+import { dummyProjects, dummySessions } from "@/lib/dummy-data";
+
+interface Message {
+  id: string;
+  from: "user" | "assistant";
+  text: string;
+  ts?: number;
+}
+
+export function SessionChatDrawer({
+  open,
+  onOpenChange,
+  projectId,
+  sessionId,
+  initialAssistantText,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  projectId: string | number;
+  sessionId: string | number;
+  initialAssistantText?: string;
+}) {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "m1",
+      from: "assistant",
+      text:
+        initialAssistantText ||
+        `Hi — I'm your session assistant for session ${sessionId}. Ask me about this session's transcript, notes, or insights.`,
+      ts: Date.now(),
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [typing, setTyping] = useState(false);
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  const project = dummyProjects.find((p) => String(p.id) === String(projectId));
+  const session = dummySessions.find((s) => String(s.id) === String(sessionId));
+
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: 99999 });
+  }, [messages, open]);
+
+  const send = () => {
+    if (!input.trim()) return;
+    const now = Date.now();
+    const userMsg: Message = {
+      id: String(now),
+      from: "user",
+      text: input.trim(),
+      ts: now,
+    };
+    setMessages((m) => [...m, userMsg]);
+    setInput("");
+
+    // simulate assistant reply after a short delay
+    setTyping(true);
+    setTimeout(() => {
+      setTyping(false);
+      const reply: Message = {
+        id: String(Date.now() + 1),
+        from: "assistant",
+        text: `I looked at session ${sessionId} in project ${projectId}. Quick summary: (simulated) — You asked: "${userMsg.text}"`,
+        ts: Date.now(),
+      };
+      setMessages((prev) => [...prev, reply]);
+    }, 800 + Math.random() * 800);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  };
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="w-full right-0 top-0 bottom-0 fixed z-50">
+        <div className="flex h-screen">
+          {/* Single-column chat area (no left context panel) */}
+          <div className="flex-1 flex flex-col">
+            <DrawerHeader>
+              <div className="flex items-center gap-3">
+                <MessageSquare className="w-5 h-5" />
+                <DrawerTitle>Session Assistant</DrawerTitle>
+              </div>
+              <DrawerDescription>
+                Chat about session{" "}
+                <strong>{session?.title ?? sessionId}</strong> in project{" "}
+                <strong>{project?.name ?? projectId}</strong>.
+              </DrawerDescription>
+            </DrawerHeader>
+
+            <div ref={listRef} className="flex-1 overflow-auto p-4 space-y-3">
+              {messages.map((m, idx) => {
+                const prev = messages[idx - 1];
+                const isFirstInGroup = !prev || prev.from !== m.from;
+                return (
+                  <div
+                    key={m.id}
+                    className={`flex ${
+                      m.from === "user" ? "justify-end" : "justify-start"
+                    }`}
+                  >
+                    <div className="max-w-[85%]">
+                      <div className="flex items-end gap-2">
+                        {m.from === "assistant" && isFirstInGroup && (
+                          <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-700 dark:text-slate-200">
+                            A
+                          </div>
+                        )}
+
+                        <div
+                          className={`${
+                            m.from === "user"
+                              ? "bg-blue-600 text-white px-3 py-2 rounded-md"
+                              : "bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-md text-slate-900 dark:text-white"
+                          }`}
+                        >
+                          <div>{m.text}</div>
+                          <div className="text-xs text-slate-400 mt-1 text-right">
+                            {m.ts ? new Date(m.ts).toLocaleTimeString() : ""}
+                          </div>
+                        </div>
+
+                        {m.from === "user" && isFirstInGroup && (
+                          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white">
+                            U
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {typing && (
+                <div className="flex items-start">
+                  <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-700 dark:text-slate-200">
+                    A
+                  </div>
+                  <div className="ml-3 bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-md">
+                    <div className="h-3 w-12 bg-slate-300 rounded animate-pulse" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <DrawerFooter>
+              <div className="flex gap-2">
+                <Input
+                  value={input}
+                  onKeyDown={onKeyDown}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Ask something about this session... (Enter to send)"
+                />
+                <Button onClick={send}>Send</Button>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Close
+                </Button>
+              </div>
+            </DrawerFooter>
+          </div>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
