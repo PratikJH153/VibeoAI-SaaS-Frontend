@@ -29,10 +29,21 @@ import {
   dummyInsights,
 } from "@/lib/dummy-data";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText } from "lucide-react";
+import { FileText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SessionChatDrawer } from "@/components/session/SessionChatDrawer";
 import { AddNoteDialog } from "@/components/session/AddNoteDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import ActionPanel from "@/components/session/ActionPanel";
+import InsightsCardSection from "@/components/session/InsightsCardSection";
+import ThematicDeepDive from "@/components/session/ThematicDeepDive";
 
 // derive tags from top themes so filter options reflect actual data
 const filterTags = (dummyThemes || []).slice(0, 6).map((t: any) => ({
@@ -62,6 +73,9 @@ export default function SessionPage({
   const [overviewAssistantText, setOverviewAssistantText] = useState<
     string | undefined
   >(undefined);
+  const [insightDialogOpen, setInsightDialogOpen] = useState(false);
+  const [activeInsight, setActiveInsight] = useState<any | null>(null);
+  const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
 
   const session =
     dummySessions.find((s) => String(s.id) === String(sessionId)) ??
@@ -83,7 +97,11 @@ export default function SessionPage({
   const addNote = useNotesStore((s) => s.addNote);
 
   return (
-    <MainLayout showTopNavBar={false}>
+    <MainLayout
+      showTopNavBar={false}
+      ambientTheme={selectedTheme}
+      showAmbient={showTranscriptButton}
+    >
       <div className="max-w-[1800px] mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -127,36 +145,32 @@ export default function SessionPage({
               </TabsTrigger>
 
               <TabsTrigger
-                value="notes"
+                value="my_workspace"
                 onClick={() => setShowTranscriptButton(false)}
               >
-                Notes
-              </TabsTrigger>
-              <TabsTrigger
-                value="reports"
-                onClick={() => setShowTranscriptButton(false)}
-              >
-                Reports
+                My Workspace
               </TabsTrigger>
             </TabsList>
 
             <div className="flex items-center gap-3">
               <Button
+                variant="gradient"
                 onClick={() => setSessionChatOpen(true)}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white font-semibold rounded-lg shadow-lg hover:opacity-95 focus:opacity-90"
+                className="px-4 py-2 bg-gradient-to-r text-white font-semibold rounded-lg shadow-lg hover:opacity-95 focus:opacity-90"
               >
-                Chat with session
+                <Sparkles className="w-4 h-4 mr-2" />
+                Ask Anything
               </Button>
             </div>
             {showTranscriptButton && (
               <div className="flex items-center justify-end gap-3 ml-3">
                 <div className="flex items-center gap-2">
-                  <Button
+                  {/* <Button
                     onClick={() => setTranscriptOpen((v) => !v)}
                     className="px-2"
                   >
                     {transcriptOpen ? "Hide Transcript" : "Show Transcript"}
-                  </Button>
+                  </Button> */}
                   <AddNoteDialog currentTime={currentTime} />
                 </div>
               </div>
@@ -164,39 +178,28 @@ export default function SessionPage({
           </div>
 
           <TabsContent value="session" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className=" grid grid-cols-12 lg:grid-cols-9 gap-6 items-stretch max-w-full min-h-[720px]">
               {/* Video - make larger on large screens */}
-              <div className="space-y-6 lg:col-span-6 flex flex-col">
-                <div className="flex-1 min-h-[420px] lg:min-h-[560px] rounded-2xl overflow-hidden">
+              <div className="space-y-6 col-span-12 lg:col-span-5 flex flex-col h-full">
+                <div className="flex-1 min-h-[420px] lg:min-h-[560px] rounded-2xl overflow-hidden h-full">
                   <VideoPlayer
                     url={videoUrl}
-                    markers={dummyTimelineMarkers}
                     onProgress={(progress) =>
                       setCurrentTime(progress.playedSeconds)
                     }
                     seekRef={seekRef}
+                    onThemeSelect={(themeName) => setSelectedTheme(themeName)}
                   />
+                  <div className="h-8" />
+                  {/* <TagsFilter
+                    tags={filterTags}
+                    selectedTags={selectedTags}
+                    onTagToggle={handleTagToggle}
+                  /> */}
+                  <ThematicDeepDive theme={selectedTheme ?? "Overview"} />
                 </div>
               </div>
-
-              {/* Transcript column - collapsible */}
-              {transcriptOpen ? (
-                <div className="space-y-6 lg:col-span-3 flex flex-col">
-                  <div className="flex-1 min-h-[420px] rounded-2xl overflow-hidden">
-                    <TranscriptPanel
-                      transcripts={dummyTranscripts}
-                      currentTime={currentTime}
-                      onSeek={(t) => seekRef.current?.(t)}
-                      onAddToNotes={(content, timestamp) =>
-                        addNote({ content, tags: [], timestamp_ref: timestamp })
-                      }
-                    />
-                  </div>
-                </div>
-              ) : null}
-
-              {/* AI notes / analysis column - expands to remaining space when transcript hidden */}
-              <div
+              {/* <div
                 className={`space-y-6 ${
                   transcriptOpen ? "lg:col-span-3" : "lg:col-span-6"
                 } flex flex-col`}
@@ -214,14 +217,61 @@ export default function SessionPage({
                   />
                 </div>
               </div>
-            </div>
-            <TagsFilter
-              tags={filterTags}
-              selectedTags={selectedTags}
-              onTagToggle={handleTagToggle}
-            />
+              {transcriptOpen ? (
+                <div className="space-y-6 lg:col-span-3 flex flex-col">
+                  <div className="flex-1 min-h-[120px] rounded-2xl overflow-hidden max-h-[480px]">
+                    <TranscriptPanel
+                      transcripts={dummyTranscripts}
+                      currentTime={currentTime}
+                      onSeek={(t) => seekRef.current?.(t)}
+                      onAddToNotes={(content, timestamp) =>
+                        addNote({ content, tags: [], timestamp_ref: timestamp })
+                      }
+                    />
+                  </div>
+                </div>
+              ) : null} */}
 
-            <SentimentTimeline data={dummySentimentData} />
+              <div className="space-y-6 col-span-12 lg:col-span-4 flex flex-col h-full">
+                <div className="flex-1 min-h-[420px] lg:min-h-[560px] rounded-2xl overflow-hidden max-h-[725px] lg:max-h-[760px] h-full">
+                  <ActionPanel
+                    dummyInsights={
+                      selectedTheme
+                        ? (dummyInsights || []).filter(
+                            (d: any) =>
+                              String(d.theme).toLowerCase() ===
+                              String(selectedTheme).toLowerCase()
+                          )
+                        : dummyInsights
+                    }
+                    setActiveInsight={setActiveInsight}
+                    setInsightDialogOpen={setInsightDialogOpen}
+                    insightDialogOpen={insightDialogOpen}
+                    activeInsight={activeInsight}
+                    addNoteButtonClick={() => {
+                      // save to notes: use addNote from store with short content
+                      const content = `Insight: ${activeInsight?.theme}\n\n${
+                        activeInsight?.insights?.[0]?.summary ||
+                        activeInsight?.detailed_analysis ||
+                        ""
+                      }`;
+                      addNote({
+                        content,
+                        tags: activeInsight?.tags || [],
+                        timestamp_ref: currentTime,
+                      });
+                      setInsightDialogOpen(false);
+                    }}
+                    notes={dummyNotes}
+                    transcripts={dummyTranscripts}
+                    currentTime={currentTime}
+                    setCurrentTime={setCurrentTime}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* <SentimentTimeline data={dummySentimentData} />
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
               <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
                 Session Notes
@@ -231,11 +281,15 @@ export default function SessionPage({
                 onChange={setNotes}
                 placeholder="Add your observations and insights..."
               />
-            </div>
+            </div> */}
           </TabsContent>
 
           <TabsContent value="summary" className="space-y-6">
-            <ThemesCloud themes={dummyThemes} />
+            <ThemesCloud
+              themes={dummyThemes}
+              onSelect={(t) => setSelectedTheme(t)}
+            />
+
             <SummaryCharts
               sentimentSplit={dummySummaryData.sentimentSplit}
               topEmotions={dummySummaryData.topEmotions}
@@ -280,11 +334,8 @@ export default function SessionPage({
                 </div>
               </div>
 
-              <div className="lg:col-span-4 space-y-4">
+              {/* <div className="lg:col-span-4 space-y-4">
                 <div className="bg-gradient-to-br from-pink-50 to-indigo-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl p-4">
-                  <p className="text-sm text-slate-700 dark:text-slate-300">
-                    Quick actions
-                  </p>
                   <div className="mt-4 flex flex-col gap-2">
                     <Button
                       onClick={() => {
@@ -299,7 +350,7 @@ export default function SessionPage({
                     </Button>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
           </TabsContent>
 
@@ -307,32 +358,37 @@ export default function SessionPage({
             <Quotes sessionId={resolvedParams.sessionId} />
           </TabsContent>
 
-          <TabsContent value="notes" className="space-y-6">
-            <NotesPanel />
-          </TabsContent>
-
-          <TabsContent value="reports" className="space-y-6">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-                    Reports & Summaries
-                  </h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Generate and edit AI-powered reports from your session
-                  </p>
+          <TabsContent value="my_workspace" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-6 space-y-6">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <NotesPanel />
                 </div>
-                <Button
-                  onClick={() => setReportModalOpen(true)}
-                  className="gap-2"
-                >
-                  <FileText className="w-4 h-4" />
-                  Generate Report
-                </Button>
+              </div>
+
+              <div className="lg:col-span-6 space-y-6">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+                        Reports & Summaries
+                      </h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        Generate and edit AI-powered reports from your session
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => setReportModalOpen(true)}
+                      className="gap-2"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Generate Report
+                    </Button>
+                  </div>
+                  <ExecutiveSummaryEditor />
+                </div>
               </div>
             </div>
-
-            <ExecutiveSummaryEditor />
           </TabsContent>
         </Tabs>
       </div>

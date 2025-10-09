@@ -1,16 +1,24 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { Video, Calendar, MoveVertical as MoreVertical, Play, Plus, Download } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { motion } from "framer-motion";
+import {
+  Video,
+  Calendar,
+  MoveVertical as MoreVertical,
+  Play,
+  Plus,
+  Download,
+  MoreHorizontal,
+} from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import Link from 'next/link';
+} from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 
 interface ProjectCardProps {
   id: string;
@@ -38,7 +46,7 @@ export function ProjectCard({
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="p-6 hover:shadow-lg transition-shadow border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <Card className="p-6 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-start gap-3">
             <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
@@ -59,13 +67,15 @@ export function ProjectCard({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreVertical className="w-4 h-4" />
+                <MoreHorizontal className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>Edit Project</DropdownMenuItem>
               <DropdownMenuItem>Duplicate</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600">
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

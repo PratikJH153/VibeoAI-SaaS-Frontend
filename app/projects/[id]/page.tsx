@@ -2,11 +2,11 @@
 
 import React, { useState } from "react";
 import { useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { MainLayout } from "@/components/layout/MainLayout";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Sparkle, Sparkles } from "lucide-react";
 import { dummyProjects, dummySessions } from "@/lib/dummy-data";
 import { SessionCard } from "@/components/projects/SessionCard";
 import { CreateSessionModal } from "@/components/projects/CreateSessionModal";
@@ -27,8 +27,13 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   );
 
   return (
-    <MainLayout>
-      <div className="max-w-[1400px] mx-auto">
+    <MainLayout
+      askAnythingButtonLabel="Ask Anything"
+      onAskAnything={() => setChatOpen(true)}
+      onCreateNew={() => setCreateModalOpen(true)}
+      createButtonLabel="New Session"
+    >
+      <div className="max-w-1xl m-2 mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -46,23 +51,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           <div className="text-sm text-slate-500">
             <span className="mr-4">{project.sessions_count} sessions</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href={`/projects/${project.id}`}>
-              <Button variant="ghost">Project Settings</Button>
-            </Link>
-            <Button
-              variant="gradient"
-              onClick={() => setChatOpen(true)}
-              className="px-5"
-            >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Chat with project
-            </Button>
-            <Button onClick={() => setCreateModalOpen(true)}>
-              Create Session
-            </Button>
-          </div>
         </div>
+
+        {sessions.length > 1 && <ProminentProgressBanner />}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {sessions.map((s) => (
@@ -91,5 +82,87 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         projectId={project.id}
       />
     </MainLayout>
+  );
+}
+
+function ProminentProgressBanner() {
+  const [progress, setProgress] = React.useState(0);
+  const [currentStep, setCurrentStep] = React.useState(0);
+  const steps = [
+    "Initializing session",
+    "Uploading media",
+    "Processing video",
+    "Analyzing audio",
+    "Finalizing",
+  ];
+
+  React.useEffect(() => {
+    const totalMs = 10000; // total 10s
+    const stepMs = totalMs / steps.length;
+    const start = Date.now();
+
+    let rafId: number;
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const pct = Math.min(100, (elapsed / totalMs) * 100);
+      setProgress(pct);
+      const idx = Math.min(steps.length - 1, Math.floor(elapsed / stepMs));
+      setCurrentStep(idx);
+      if (pct < 100) rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="mb-6">
+      <div className="rounded-lg p-4 bg-gradient-to-r  text-black shadow-lg">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold">Session processing</h3>
+            <p className="text-sm opacity-90 mt-1">
+              Live processing for newly created sessions
+            </p>
+          </div>
+          <div className="text-sm font-mono text-white/90">
+            {Math.round(progress)}%
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <div className="h-3 bg-black/10 rounded-full overflow-hidden">
+            <motion.div
+              className="h-3 bg-indigo-600"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ ease: "linear", duration: 0.12 }}
+            />
+          </div>
+
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            {steps.map((s, i) => (
+              <motion.span
+                key={s}
+                initial={{ opacity: 0.6, scale: 0.98 }}
+                animate={{
+                  opacity: i === currentStep ? 1 : 0.7,
+                  scale: i === currentStep ? 1.02 : 1,
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className={`text-xs px-2 py-1 rounded-full ${
+                  i === currentStep
+                    ? "bg-white/90 text-indigo-700 font-semibold"
+                    : "bg-white/20 text-black/70 dark:text-white/70"
+                }`}
+              >
+                {s}
+              </motion.span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

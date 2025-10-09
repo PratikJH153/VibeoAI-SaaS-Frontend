@@ -2,22 +2,36 @@
 
 import { motion } from "framer-motion";
 import {
-  Chrome as Home,
+  Workflow,
   FileText,
   Video,
   Settings,
   ChevronLeft,
   ChevronRight,
   ChartBar as BarChart3,
+  LayoutDashboard,
+  SidebarOpen,
+  SidebarClose,
+  PanelRight,
+  PanelRightOpen,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import {
+  SignedIn,
+  SignedOut,
+  UserButton,
+  SignInButton,
+  SignUpButton,
+  useUser,
+} from "@clerk/nextjs";
 
 const navItems = [
-  { icon: Home, label: "Projects", href: "/" },
-  { icon: BarChart3, label: "Analytics", href: "/analytics" },
+  { icon: Workflow, label: "Projects", href: "/projects" },
   { icon: FileText, label: "Reports", href: "/reports" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
@@ -50,9 +64,9 @@ export function Sidebar() {
             className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
             {sidebarCollapsed ? (
-              <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+              <PanelRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
             ) : (
-              <ChevronLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+              <PanelLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
             )}
           </button>
         </div>
@@ -85,28 +99,91 @@ export function Sidebar() {
         </nav>
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-          <div
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5",
-              sidebarCollapsed && "justify-center"
-            )}
-          >
-            <div className="w-8 h-8 bg-gradient-to-br from-slate-300 to-slate-400 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm font-medium">U</span>
-            </div>
-            {!sidebarCollapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                  Demo User
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  demo@example.com
-                </p>
+          <SignedIn>
+            <UserInfo sidebarCollapsed={sidebarCollapsed} />
+          </SignedIn>
+
+          <SignedOut>
+            <div
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5",
+                sidebarCollapsed && "justify-center"
+              )}
+            >
+              <div className="w-8 h-8 bg-gradient-to-br from-slate-300 to-slate-400 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-sm font-medium">U</span>
               </div>
-            )}
-          </div>
+              {!sidebarCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                    Guest
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <SignInButton>
+                      <button className="text-sm text-slate-600 dark:text-slate-300">
+                        Sign in
+                      </button>
+                    </SignInButton>
+                    <SignUpButton>
+                      <button className="text-sm bg-[#6c47ff] text-white px-3 py-1 rounded-full">
+                        Sign up
+                      </button>
+                    </SignUpButton>
+                  </div>
+                </div>
+              )}
+            </div>
+          </SignedOut>
         </div>
       </div>
     </motion.aside>
+  );
+}
+
+function UserInfo({ sidebarCollapsed }: { sidebarCollapsed: boolean }) {
+  const { user } = useUser();
+
+  const primaryName = user?.fullName ?? user?.firstName ?? user?.username ?? "";
+  const email = user?.emailAddresses?.[0]?.emailAddress ?? "";
+
+  const initials = (() => {
+    if (user?.firstName || user?.lastName) {
+      return `${user?.firstName ? user.firstName[0] : ""}${
+        user?.lastName ? user.lastName[0] : ""
+      }`.toUpperCase();
+    }
+    if (primaryName)
+      return primaryName
+        .split(" ")
+        .map((s) => s[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase();
+    if (email) return email[0].toUpperCase();
+    return "U";
+  })();
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 px-3 py-2.5",
+        sidebarCollapsed && "justify-center"
+      )}
+    >
+      <div className="ml-auto">
+        <UserButton />
+      </div>
+
+      {!sidebarCollapsed && (
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+            {primaryName || "User"}
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+            {email || ""}
+          </p>
+        </div>
+      )}
+    </div>
   );
 }

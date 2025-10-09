@@ -1,25 +1,30 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { FileText, ChartBar as BarChart3, MessageSquare, Download } from 'lucide-react';
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  FileText,
+  ChartBar as BarChart3,
+  MessageSquare,
+  Download,
+} from "lucide-react";
 
 interface GenerateReportModalProps {
   open: boolean;
@@ -28,40 +33,48 @@ interface GenerateReportModalProps {
 
 const reportTypes = [
   {
-    id: 'executive',
-    label: 'Executive Summary',
-    description: 'High-level overview with key insights and recommendations',
+    id: "executive",
+    label: "Executive Summary",
+    description: "Quick insights for fast decisions — 3–5 pages.",
     icon: FileText,
   },
   {
-    id: 'insights',
-    label: 'Insights Report',
-    description: 'Detailed analysis with charts, themes, and sentiment breakdown',
+    id: "insights",
+    label: "Analyst Report",
+    description: "Balanced depth for teams and strategy — 5–10 pages.",
     icon: BarChart3,
   },
   {
-    id: 'conversation',
-    label: 'Conversation Report',
-    description: 'Full transcript with annotations and highlighted moments',
+    id: "conversation",
+    label: "Comprehensive Report",
+    description: "Full-scale report for detailed validation — 10–20 pages.",
     icon: MessageSquare,
   },
 ];
 
 const themes = [
-  'Context Switching',
-  'Tool Integration',
-  'Team Visibility',
-  'Time Management',
-  'Collaboration',
+  "Marketing Strategy",
+  "Product Development",
+  "Customer Feedback",
+  "Sales Performance",
+  "Competitive Analysis",
+  "Market Trends",
+  "Operational Efficiency",
+  "Financial Overview",
+  "Team Collaboration",
+  "Future Roadmap",
 ];
 
-export function GenerateReportModal({ open, onOpenChange }: GenerateReportModalProps) {
-  const [selectedType, setSelectedType] = useState('executive');
+export function GenerateReportModal({
+  open,
+  onOpenChange,
+}: GenerateReportModalProps) {
+  const [selectedType, setSelectedType] = useState("executive");
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
-  const [tone, setTone] = useState('professional');
+  const [tone, setTone] = useState("professional");
 
   const handleGenerate = () => {
-    console.log('Generating report:', { selectedType, selectedThemes, tone });
+    console.log("Generating report:", { selectedType, selectedThemes, tone });
     onOpenChange(false);
   };
 
@@ -71,7 +84,8 @@ export function GenerateReportModal({ open, onOpenChange }: GenerateReportModalP
         <DialogHeader>
           <DialogTitle>Generate Report</DialogTitle>
           <DialogDescription>
-            Customize and generate a comprehensive report from your session analysis
+            Customize and generate a comprehensive report from your session
+            analysis
           </DialogDescription>
         </DialogHeader>
 
@@ -89,21 +103,25 @@ export function GenerateReportModal({ open, onOpenChange }: GenerateReportModalP
                     onClick={() => setSelectedType(type.id)}
                     className={`p-4 rounded-xl border-2 transition-all text-left ${
                       selectedType === type.id
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
                     }`}
                   >
                     <div className="flex gap-3">
-                      <div className={`p-2 rounded-lg ${
-                        selectedType === type.id
-                          ? 'bg-blue-100 dark:bg-blue-900/40'
-                          : 'bg-slate-100 dark:bg-slate-800'
-                      }`}>
-                        <Icon className={`w-5 h-5 ${
+                      <div
+                        className={`p-2 rounded-lg ${
                           selectedType === type.id
-                            ? 'text-blue-600 dark:text-blue-400'
-                            : 'text-slate-600 dark:text-slate-400'
-                        }`} />
+                            ? "bg-blue-100 dark:bg-blue-900/40"
+                            : "bg-slate-100 dark:bg-slate-800"
+                        }`}
+                      >
+                        <Icon
+                          className={`w-5 h-5 ${
+                            selectedType === type.id
+                              ? "text-blue-600 dark:text-blue-400"
+                              : "text-slate-600 dark:text-slate-400"
+                          }`}
+                        />
                       </div>
                       <div>
                         <h4 className="font-semibold text-slate-900 dark:text-white mb-1">
@@ -121,6 +139,20 @@ export function GenerateReportModal({ open, onOpenChange }: GenerateReportModalP
           </div>
 
           <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Checkbox id="include-notes" defaultChecked />
+                <label
+                  htmlFor="include-notes"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  <Label>Include Notes in Report</Label>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
             <Label>Include Themes (Optional)</Label>
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {themes.map((theme) => (
@@ -132,7 +164,9 @@ export function GenerateReportModal({ open, onOpenChange }: GenerateReportModalP
                       if (checked) {
                         setSelectedThemes([...selectedThemes, theme]);
                       } else {
-                        setSelectedThemes(selectedThemes.filter((t) => t !== theme));
+                        setSelectedThemes(
+                          selectedThemes.filter((t) => t !== theme)
+                        );
                       }
                     }}
                   />
@@ -164,7 +198,11 @@ export function GenerateReportModal({ open, onOpenChange }: GenerateReportModalP
         </div>
 
         <div className="flex gap-3 pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="flex-1"
+          >
             Cancel
           </Button>
           <Button onClick={handleGenerate} className="flex-1 gap-2">

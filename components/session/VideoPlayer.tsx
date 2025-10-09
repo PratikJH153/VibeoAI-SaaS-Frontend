@@ -1,10 +1,22 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Play, Pause, Volume2, VolumeX, Maximize, Check } from "lucide-react";
+import {
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
+  Check,
+  Minimize,
+  SkipForward,
+} from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { formatTime } from "@/utils/format_time";
+
+import themesData from "@/data/themes_to_timestamps_95b5d907-0d2.json";
+import { getColorForTheme } from "@/lib/theme-colors";
 
 // Using native HTML5 <video> for reliability. ReactPlayer was removed.
 
@@ -14,23 +26,35 @@ interface Marker {
   color: string;
 }
 
+interface ThemeSegment {
+  name: string;
+  start: number;
+  end: number;
+  color?: string;
+}
+
 interface VideoPlayerProps {
   url: string;
-  markers?: Marker[];
   onProgress?: (progress: { playedSeconds: number }) => void;
   // optional ref from parent to allow external components to request a seek
   seekRef?: React.MutableRefObject<((seconds: number) => void) | null>;
+  // optional theme segments for the timeline (seconds)
+  themes?:
+    | Array<ThemeSegment>
+    | Record<string, { start_time: number; end_time: number }>;
+  // callback invoked when a theme is selected (by clicking on the timeline)
+  onThemeSelect?: (themeName: string | null) => void;
 }
 
 export function VideoPlayer({
   url,
-  markers = [],
   onProgress,
   seekRef,
+  themes,
+  onThemeSelect,
 }: VideoPlayerProps) {
-  const [selectedMarker, setSelectedMarker] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
-  const playerRef = useRef<any>(null);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -38,6 +62,43 @@ export function VideoPlayer({
   const [played, setPlayed] = useState(0);
   const [duration, setDuration] = useState(0);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
+
+  // compute themes from prop or fallback JSON
+  const computedThemes: ThemeSegment[] = useMemo(() => {
+    if (!themes) {
+      const src: any = themesData ?? {};
+      return Object.entries(src).map(([name, t], i) => ({
+        name,
+        start: (t as any).start_time,
+        end: (t as any).end_time,
+        color: getColorForTheme(name),
+      }));
+    }
+
+    if (Array.isArray(themes)) return themes as ThemeSegment[];
+
+    // object map provided
+    return Object.entries(themes as Record<string, any>).map(([name, t]) => ({
+      name,
+      start: (t as any).start_time,
+      end: (t as any).end_time,
+      color: getColorForTheme(name),
+    }));
+  }, [themes]);
+
+  // compute unique theme boundary timestamps (start/end) for rendering dividers
+  const themeBoundaries = useMemo(() => {
+    if (!computedThemes || computedThemes.length === 0 || !duration)
+      return [] as number[];
+    const s = new Set<number>();
+    computedThemes.forEach((t) => {
+      if (typeof t.start === "number") s.add(t.start);
+      if (typeof t.end === "number") s.add(t.end);
+    });
+    return Array.from(s)
+      .filter((v) => v > 0 && v < duration)
+      .sort((a, b) => a - b);
+  }, [computedThemes, duration]);
 
   // keep native video element in sync with state
   useEffect(() => {
@@ -80,6 +141,45 @@ export function VideoPlayer({
     }
   };
 
+  // Seek to the start of the next theme segment given current playback time.
+  const skipToNextTheme = () => {
+    try {
+      if (!videoRef.current || !duration || !computedThemes) return;
+      const current = videoRef.current.currentTime || 0;
+      // find first theme whose start is strictly greater than current time + small epsilon
+      const epsilon = 0.001;
+      const sorted = computedThemes
+        .slice()
+        .filter((t) => typeof t.start === "number")
+        .sort((a, b) => a.start - b.start);
+      const next = sorted.find((t) => t.start > current + epsilon);
+      if (next) {
+        seekToSeconds(next.start);
+        try {
+          if (onThemeSelect) {
+            lastNotifiedThemeRef.current = next.name;
+            onThemeSelect(next.name);
+          }
+        } catch (err) {
+          // ignore
+        }
+      } else {
+        // if none found, optionally jump to end or do nothing. We'll jump to video end.
+        seekToSeconds(duration);
+        try {
+          if (onThemeSelect) {
+            lastNotifiedThemeRef.current = null;
+            onThemeSelect(null);
+          }
+        } catch (err) {
+          // ignore
+        }
+      }
+    } catch (err) {
+      // ignore
+    }
+  };
+
   // expose seek function to parent if a ref was provided
   useEffect(() => {
     if (!seekRef) return;
@@ -109,6 +209,15 @@ export function VideoPlayer({
   }, []);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const sliderContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const [isHovered, setIsHovered] = useState(false);
+
+  const [hoveredTheme, setHoveredTheme] = useState<ThemeSegment | null>(null);
+  const [tooltipPageX, setTooltipPageX] = useState<number>(0);
+  const [tooltipPageY, setTooltipPageY] = useState<number>(0);
+  // track last theme we notified parent about to avoid spamming callbacks
+  const lastNotifiedThemeRef = useRef<string | null>(null);
 
   const toggleFullscreen = async () => {
     const el = containerRef.current;
@@ -116,8 +225,10 @@ export function VideoPlayer({
     try {
       if (!document.fullscreenElement) {
         await el.requestFullscreen();
+        setIsFullScreen(true);
       } else {
         await document.exitFullscreen();
+        setIsFullScreen(false);
       }
     } catch (err) {
       // ignore
@@ -125,11 +236,18 @@ export function VideoPlayer({
   };
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        setHoveredTheme(null);
+      }}
+    >
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="relative aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-2xl"
+        className="relative aspect-video  bg-slate-900 rounded-2xl overflow-hidden shadow-2xl h-full"
         ref={containerRef}
       >
         {/* Render a lightweight placeholder on the server, mount full video on client */}
@@ -150,7 +268,7 @@ export function VideoPlayer({
                   )}`
                 : url
             }
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain bg-black"
             playsInline
             crossOrigin="anonymous"
             onLoadedMetadata={() =>
@@ -160,6 +278,20 @@ export function VideoPlayer({
               const current = (e.target as HTMLVideoElement).currentTime;
               setPlayed(duration ? current / duration : 0);
               onProgress?.({ playedSeconds: current });
+              try {
+                if (computedThemes && computedThemes.length > 0) {
+                  const found = computedThemes.find(
+                    (t) => current >= t.start && current <= t.end
+                  );
+                  const name = found ? found.name : null;
+                  if (onThemeSelect && lastNotifiedThemeRef.current !== name) {
+                    lastNotifiedThemeRef.current = name;
+                    onThemeSelect(name);
+                  }
+                }
+              } catch (err) {
+                // ignore
+              }
             }}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
@@ -172,7 +304,101 @@ export function VideoPlayer({
 
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-4">
           {/* Progress / seek slider */}
-          <div className="mb-2">
+          <div
+            className="mb-2 relative"
+            ref={sliderContainerRef}
+            onMouseMove={(e) => {
+              if (!sliderContainerRef.current || !duration) return;
+              const rect = sliderContainerRef.current.getBoundingClientRect();
+              const x = (e.clientX ?? 0) - rect.left;
+              const pct = Math.max(0, Math.min(1, x / rect.width));
+              const seconds = pct * duration;
+              // store page coords for fixed tooltip
+              setTooltipPageX(e.clientX);
+              setTooltipPageY(rect.top - 10);
+              if (computedThemes && computedThemes.length > 0) {
+                const found = computedThemes.find(
+                  (t) => seconds >= t.start && seconds <= t.end
+                );
+                if (found) setHoveredTheme(found as ThemeSegment);
+                else setHoveredTheme(null);
+              }
+            }}
+            onClick={(e) => {
+              if (!sliderContainerRef.current || !duration) return;
+              const rect = sliderContainerRef.current.getBoundingClientRect();
+              const x = (e.clientX ?? 0) - rect.left;
+              const pct = Math.max(0, Math.min(1, x / rect.width));
+              const seconds = pct * duration;
+              seekToSeconds(seconds);
+              // also determine which theme was clicked (if any) and notify parent
+              try {
+                if (computedThemes && computedThemes.length > 0) {
+                  const found = computedThemes.find(
+                    (t) => seconds >= t.start && seconds <= t.end
+                  );
+                  if (onThemeSelect) onThemeSelect(found ? found.name : null);
+                }
+              } catch (err) {
+                // ignore
+              }
+            }}
+          >
+            {/* Segmented theme background - rendered beneath the slider so native slider interaction remains */}
+            {isHovered && (
+              <div className="absolute inset-0 h-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <div className="relative h-3 w-full">
+                  {computedThemes && duration > 0
+                    ? computedThemes.map((t, i) => {
+                        const rawLeft = (t.start / duration) * 100;
+                        const rawRight = (t.end / duration) * 100;
+                        // clamp to avoid coloring the extreme edges
+                        const left = Math.max(1, Math.min(99, rawLeft));
+                        const right = Math.max(1, Math.min(99, rawRight));
+                        const width = Math.max(0.5, right - left);
+                        const bg = t.color ? t.color : "#60A5FA"; // default blue-400
+                        return (
+                          <div
+                            key={i}
+                            className="absolute top-0 h-3 rounded-sm"
+                            style={{
+                              left: `${left}%`,
+                              width: `${width}%`,
+                              background: `${bg}`, // translucent
+                              border: `1px solid ${bg}55`,
+                            }}
+                            aria-hidden
+                          />
+                        );
+                      })
+                    : null}
+                  {/* Dividers at theme boundaries */}
+                  {themeBoundaries && themeBoundaries.length > 0 && (
+                    <div className="absolute inset-0 h-3 pointer-events-none">
+                      {themeBoundaries.map((ts, i) => {
+                        const pct = (ts / duration) * 100;
+                        return (
+                          <div
+                            key={`div-${i}`}
+                            aria-hidden
+                            className="absolute top-0 h-3 bg-white rounded"
+                            style={{
+                              left: `${pct}%`,
+                              width: 0,
+                              borderLeft: `1px solid rgba(255,255,255,0.12)`,
+                              transform: "translateX(-0.5px) translateY(0.5px)",
+                              zIndex: 999,
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Native slider on top */}
             <Slider
               value={[played * duration * 100 || 0]}
               max={duration * 100 || 100}
@@ -180,8 +406,36 @@ export function VideoPlayer({
                 const seconds = (v[0] || 0) / 100;
                 seekToSeconds(seconds);
               }}
-              className="w-full"
+              className="w-full relative z-10"
+              trackClassName={isHovered ? "bg-primary/10" : undefined}
             />
+
+            {/* Tooltip (shows when hovering a theme) - fixed so it appears above everything */}
+            {hoveredTheme && (
+              <div
+                className="fixed z-[9999] pointer-events-none"
+                style={{
+                  left: tooltipPageX,
+                  top: tooltipPageY,
+                  transform: "translateX(-50%) translateY(-140%)",
+                }}
+              >
+                <div
+                  className="text-white text-sm px-3 py-2 rounded-lg shadow-lg"
+                  style={{
+                    background: `${hoveredTheme.color}CC`,
+                    border: `2px solid ${hoveredTheme.color}`,
+                    minWidth: 140,
+                    textAlign: "center",
+                  }}
+                >
+                  <div className="font-semibold">{hoveredTheme.name}</div>
+                  <div className="text-xs opacity-90">
+                    {formatTime(hoveredTheme.start)}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -228,9 +482,32 @@ export function VideoPlayer({
               </div>
             </div>
 
-            <button className="p-2">
-              <Maximize className="w-4 h-4 text-white" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  // skipToNextTheme is defined below
+                  skipToNextTheme();
+                }}
+                className="flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full"
+              >
+                <SkipForward className="w-3 h-3 text-white" />
+                <span className="text-xs text-white">Skip to Next Theme</span>
+              </button>
+
+              <button className="p-2">
+                {!isFullScreen ? (
+                  <Maximize
+                    className="w-4 h-4 text-white"
+                    onClick={toggleFullscreen}
+                  />
+                ) : (
+                  <Minimize
+                    className="w-4 h-4 text-white"
+                    onClick={toggleFullscreen}
+                  />
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -243,52 +520,7 @@ export function VideoPlayer({
         )}
       </motion.div>
 
-      {markers.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {markers.map((m, i) => {
-            const isSelected = selectedMarker === i;
-            return (
-              <button
-                key={i}
-                onClick={() => {
-                  seekToSeconds(m.timestamp);
-                  setSelectedMarker(i);
-                }}
-                className={`flex items-center gap-2 px-1 py-2 rounded-full text-sm transition-all focus:outline-none focus:ring-2 ${
-                  isSelected
-                    ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
-                    : "bg-slate-100/50 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 hover:scale-[1.02]"
-                }`}
-                style={{
-                  border: `1px solid ${m.color}20`,
-                }}
-                title={`${m.label} — ${formatTime(m.timestamp)}`}
-              >
-                <span
-                  className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                    isSelected ? "bg-white dark:bg-slate-700" : ""
-                  }`}
-                  style={{ background: isSelected ? m.color : undefined }}
-                  aria-hidden
-                >
-                  {isSelected ? (
-                    <Check className="w-3 h-3 text-white" />
-                  ) : (
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ background: m.color }}
-                    />
-                  )}
-                </span>
-                <span className="whitespace-nowrap">{m.label}</span>
-                <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
-                  {formatTime(m.timestamp)}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* markers UI omitted */}
     </div>
   );
 }

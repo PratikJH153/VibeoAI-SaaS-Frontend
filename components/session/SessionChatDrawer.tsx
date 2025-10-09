@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Mic, Send } from "lucide-react";
 import { dummyProjects, dummySessions } from "@/lib/dummy-data";
 
 interface Message {
@@ -34,6 +34,7 @@ export function SessionChatDrawer({
   sessionId: string | number;
   initialAssistantText?: string;
 }) {
+  const [listening, setListening] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "m1",
@@ -54,6 +55,40 @@ export function SessionChatDrawer({
   useEffect(() => {
     listRef.current?.scrollTo({ top: 99999 });
   }, [messages, open]);
+
+  const toggleListening = () => {
+    if (listening) {
+      setListening(false);
+      return;
+    }
+    setListening(true);
+
+    // simulate listening for ~2.5s then add a user message
+    setTimeout(() => {
+      const now = Date.now();
+      const userMsg: Message = {
+        id: String(now),
+        from: "user",
+        text: "Voice input (simulated)",
+        ts: now,
+      };
+      setMessages((m) => [...m, userMsg]);
+      setListening(false);
+
+      // trigger assistant reply
+      setTyping(true);
+      setTimeout(() => {
+        setTyping(false);
+        const reply: Message = {
+          id: String(Date.now() + 1),
+          from: "assistant",
+          text: `I heard your voice input (simulated). You said: "${userMsg.text}"`,
+          ts: Date.now(),
+        };
+        setMessages((prev) => [...prev, reply]);
+      }, 800 + Math.random() * 800);
+    }, 2500);
+  };
 
   const send = () => {
     if (!input.trim()) return;
@@ -95,15 +130,40 @@ export function SessionChatDrawer({
           {/* Single-column chat area (no left context panel) */}
           <div className="flex-1 flex flex-col">
             <DrawerHeader>
-              <div className="flex items-center gap-3">
-                <MessageSquare className="w-5 h-5" />
-                <DrawerTitle>Session Assistant</DrawerTitle>
+              <div className="flex items-start justify-between w-full gap-4">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <MessageSquare className="w-5 h-5" />
+                    <DrawerTitle>Session Assistant</DrawerTitle>
+                  </div>
+                  <DrawerDescription>
+                    Chat about session{" "}
+                    <strong>{session?.title ?? sessionId}</strong> in project{" "}
+                    <strong>{project?.name ?? projectId}</strong>.
+                  </DrawerDescription>
+                </div>
+
+                {/* top-right close (X) button */}
+                <div className="ml-4 flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    onClick={() => onOpenChange(false)}
+                    aria-label="Close chat"
+                    className="p-2"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      className="w-4 h-4"
+                    >
+                      <path
+                        fill="currentColor"
+                        d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12l-4.89 4.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4z"
+                      />
+                    </svg>
+                  </Button>
+                </div>
               </div>
-              <DrawerDescription>
-                Chat about session{" "}
-                <strong>{session?.title ?? sessionId}</strong> in project{" "}
-                <strong>{project?.name ?? projectId}</strong>.
-              </DrawerDescription>
             </DrawerHeader>
 
             <div ref={listRef} className="flex-1 overflow-auto p-4 space-y-3">
@@ -161,18 +221,45 @@ export function SessionChatDrawer({
               )}
             </div>
 
-            <DrawerFooter>
-              <div className="flex gap-2">
-                <Input
-                  value={input}
-                  onKeyDown={onKeyDown}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask something about this session... (Enter to send)"
-                />
-                <Button onClick={send}>Send</Button>
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Close
-                </Button>
+            <DrawerFooter className="pb-8 pt-4">
+              <div className="w-full">
+                <div className="mx-auto w-full max-w-3xl px-4">
+                  <div className="flex items-center gap-3">
+                    <Input
+                      value={input}
+                      onKeyDown={onKeyDown}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder="Ask something about this session... (Enter to send)"
+                      className="flex-1 rounded-full px-5 py-6 text-md"
+                    />
+
+                    <Button
+                      onClick={send}
+                      className="rounded-full px-5 py-4 h-12 flex items-center"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Send
+                    </Button>
+
+                    {/* voice (mic) button in footer */}
+                    <Button
+                      variant={listening ? "default" : "ghost"}
+                      onClick={toggleListening}
+                      aria-label={
+                        listening ? "Stop listening" : "Start voice input"
+                      }
+                      className={`rounded-full px-4 py-3 h-12 ${
+                        listening ? "bg-red-600 text-white" : ""
+                      }`}
+                    >
+                      <Mic
+                        className={`w-5 h-5 ${
+                          listening ? "animate-pulse" : ""
+                        }`}
+                      />
+                    </Button>
+                  </div>
+                </div>
               </div>
             </DrawerFooter>
           </div>

@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Check, X, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, Check, X, RefreshCw, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Suggestion {
   id: string;
@@ -17,10 +17,12 @@ interface ExecutiveSummaryEditorProps {
   initialContent?: string;
 }
 
-export function ExecutiveSummaryEditor({ initialContent = '' }: ExecutiveSummaryEditorProps) {
+export function ExecutiveSummaryEditor({
+  initialContent = "",
+}: ExecutiveSummaryEditorProps) {
   const [content, setContent] = useState(
     initialContent ||
-    `Based on our analysis of the user interview with Sarah, a Product Manager with 5 years of experience, we've identified several critical pain points in her current workflow.
+      `Based on our analysis of the user interview with Sarah, a Product Manager with 5 years of experience, we've identified several critical pain points in her current workflow.
 
 The primary issue centers around context switching between multiple project management tools (Jira and Notion), resulting in significant productivity loss estimated at 30-45 minutes daily. This represents approximately 3-4 hours per week of pure administrative overhead.
 
@@ -37,16 +39,16 @@ Recommendation: Prioritize development of a unified workspace that eliminates co
 
   const [suggestions] = useState<Suggestion[]>([
     {
-      id: '1',
-      original: 'we\'ve identified several critical pain points',
-      suggested: 'we discovered three major pain points',
-      reason: 'More specific and concrete',
+      id: "1",
+      original: "we've identified several critical pain points",
+      suggested: "we discovered three major pain points",
+      reason: "More specific and concrete",
     },
     {
-      id: '2',
-      original: 'resulting in significant productivity loss',
-      suggested: 'causing a 10-15% reduction in daily productivity',
-      reason: 'Quantified impact is more compelling',
+      id: "2",
+      original: "resulting in significant productivity loss",
+      suggested: "causing a 10-15% reduction in daily productivity",
+      reason: "Quantified impact is more compelling",
     },
   ]);
 
@@ -63,11 +65,12 @@ Recommendation: Prioritize development of a unified workspace that eliminates co
   };
 
   const handleRegenerate = () => {
-    console.log('Regenerating suggestions...');
+    console.log("Regenerating suggestions...");
   };
 
   const activeSuggestions = suggestions.filter(
-    (s) => !acceptedSuggestions.includes(s.id) && !rejectedSuggestions.includes(s.id)
+    (s) =>
+      !acceptedSuggestions.includes(s.id) && !rejectedSuggestions.includes(s.id)
   );
 
   return (
@@ -87,23 +90,33 @@ Recommendation: Prioritize development of a unified workspace that eliminates co
                 AI-generated summary with inline editing capabilities
               </p>
             </div>
-            <Button onClick={handleRegenerate} variant="outline" className="gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Regenerate
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleRegenerate}
+                variant="outline"
+                className="gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Regenerate
+              </Button>
+              <Button className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white gap-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700">
+                <Download className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
         <div className="p-6">
-          <Textarea
+          {content}
+          {/* <Textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             className="min-h-[400px] font-serif text-base leading-relaxed resize-none"
-          />
+          /> */}
         </div>
       </div>
 
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {activeSuggestions.length > 0 && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -179,7 +192,7 @@ Recommendation: Prioritize development of a unified workspace that eliminates co
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
 
       {acceptedSuggestions.length > 0 && (
         <motion.div

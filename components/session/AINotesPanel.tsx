@@ -63,16 +63,7 @@ export function AINotesPanel({
       return Number.isNaN(n) ? null : n;
     }
     if (Array.isArray(v)) {
-      // choose the last numeric entry in the array (observed file stores timestamp as last element)
-      for (let i = v.length - 1; i >= 0; i--) {
-        const item = v[i];
-        if (typeof item === "number") return item;
-        if (typeof item === "string") {
-          const n = parseFloat(item);
-          if (!Number.isNaN(n)) return n;
-        }
-      }
-      return null;
+      return v[0];
     }
     return null;
   };
@@ -98,8 +89,8 @@ export function AINotesPanel({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-bg sticky top-20 border border-blue-500/20  ">
-      <div className="p-6">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-bg h-full overflow-hidden">
+      <div className="p-4">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
             <Sparkles className="w-6 h-6 text-blue-600 dark:text-blue-400 " />
@@ -113,12 +104,12 @@ export function AINotesPanel({
         </p>
       </div>
 
-      <ScrollArea className="h-[600px]">
+      <ScrollArea className="h-full">
         <div className="px-2 space-y-1">
           {/* Render insights (theme + detailed analysis) first when available */}
           {insights && insights.length > 0 && (
             <div className="space-y-4">
-              {insights.map((ins, i) => (
+              {insights.slice(0, 1).map((ins, i) => (
                 <motion.div
                   key={`ins-${i}`}
                   initial={{ opacity: 0, y: 10 }}
@@ -127,11 +118,11 @@ export function AINotesPanel({
                   className="p-4 "
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
                       {ins.theme}
-                    </h4>
+                    </h2>
                   </div>
-                  <div className="prose max-w-full dark:prose-invert text-sm">
+                  <div className="prose max-w-full dark:prose-invert text-md">
                     {/* Normalize detailed_analysis to string and convert #id=N# tokens into markdown links like [00:12](#id=12#) */}
                     {(() => {
                       let raw = ins.detailed_analysis ?? "";
@@ -142,6 +133,8 @@ export function AINotesPanel({
                           raw = String(raw);
                         }
                       }
+
+                      // raw = raw.slice(0, raw.indexOf("Key Insights"));
 
                       // replace all #id=NN# with a markdown link that we will intercept in the renderer
                       const replaced = raw.replace(/#id=(\d+)#/g, (_, id) => {
@@ -187,7 +180,7 @@ export function AINotesPanel({
               ))}
             </div>
           )}
-          {notes.map((note, index) => (
+          {/* {notes.map((note, index) => (
             <motion.div
               key={note.id}
               initial={{ opacity: 0, y: 20 }}
@@ -234,7 +227,7 @@ export function AINotesPanel({
                 No insights yet. AI will generate notes as you watch.
               </p>
             </div>
-          )}
+          )} */}
         </div>
       </ScrollArea>
     </div>

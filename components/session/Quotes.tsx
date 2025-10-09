@@ -44,13 +44,13 @@ export default function Quotes({ sessionId }: { sessionId?: string | number }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+    <div className="space-y-6 max-h-[600px] overflow-y">
+      <div className="relative max-h-[600px] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
           Top Quotes
         </h3>
-        <div className="space-y-4">
-          {quotes.map((q) => (
+        <div className="space-y-4 max-h-[600px] ">
+          {quotes.slice(1, 4).map((q) => (
             <div
               key={q.id}
               className="flex gap-4 items-start bg-gradient-to-r from-white/50 to-slate-50 dark:from-slate-900/40 dark:to-slate-900/30 rounded-xl p-4 border border-transparent hover:border-slate-200 dark:hover:border-slate-800 transition"
@@ -91,6 +91,27 @@ export default function Quotes({ sessionId }: { sessionId?: string | number }) {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Locked / Coming soon overlay: placed INSIDE the card so it only covers this card.
+            Uses a stronger blur and slightly darker overlay to make the locked state more visible.
+            pointer-events-none on wrapper allows underlying layout not to be blocked globally; the inner
+            overlay uses pointer-events-auto so it can be made interactive if needed in future. */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl">
+          <div className="pointer-events-auto w-full h-full rounded-2xl bg-white/60 dark:bg-slate-900/64 backdrop-blur-md flex items-center justify-center">
+            <div className="text-center px-6 py-4">
+              <div className="mx-auto w-14 h-14 rounded-full bg-white/60 dark:bg-slate-800/60 flex items-center justify-center border border-white/70 dark:border-slate-700">
+                {/* simple lock icon using an emoji to avoid extra deps; lucide-react could be used if preferred */}
+                <span className="text-2xl">🔒</span>
+              </div>
+              <h4 className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">
+                Locked
+              </h4>
+              <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                Coming soon — stay tuned for this update.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

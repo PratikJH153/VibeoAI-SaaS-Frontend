@@ -1,6 +1,7 @@
 // Replace static dummy content with data-derived exports from the `data/` folder
 import transcriptsRaw from '../data/transcripts_95b5d907-0d2.json';
 import themesRaw from '../data/themes_95b5d907-0d2.json';
+import { getColorForTheme } from '@/lib/theme-colors';
 import insightsRaw from '../data/insights_transcriptions_95b5d907-0d2.json';
 
 // Helper: safe cast
@@ -77,6 +78,7 @@ export const dummyThemes = themesArr
     theme_name: t.theme_name,
     mentions_count: t.mentions_count,
     relevance_score: minMentions === maxMentions ? 1 : (t.mentions_count - minMentions) / (maxMentions - minMentions),
+    color: getColorForTheme(t.theme_name),
   }));
 
 // Timeline markers: pick earliest mention for top themes
@@ -87,8 +89,11 @@ export const dummyTimelineMarkers = themesArr
     timestamp: Math.max(0, Math.round(t.earliest || 0)),
     marker_type: 'theme',
     label: t.theme_name,
-    color: '#3b82f6',
+    color: getColorForTheme(t.theme_name),
   }));
+
+
+  
 
 // Notes: derive simple notes from insightsRaw — use the first quote per theme as a note
 const notes: AnyObj[] = [];

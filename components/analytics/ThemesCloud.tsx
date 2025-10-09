@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
+import { getColorForTheme } from "@/lib/theme-colors";
 
 interface Theme {
   theme_name: string;
@@ -10,11 +11,12 @@ interface Theme {
 
 interface ThemesCloudProps {
   themes: Theme[];
+  onSelect?: (themeName: string) => void;
 }
 
-export function ThemesCloud({ themes }: ThemesCloudProps) {
-  const maxMentions = Math.max(...themes.map(t => t.mentions_count));
-  const minMentions = Math.min(...themes.map(t => t.mentions_count));
+export function ThemesCloud({ themes, onSelect }: ThemesCloudProps) {
+  const maxMentions = Math.max(...themes.map((t) => t.mentions_count));
+  const minMentions = Math.min(...themes.map((t) => t.mentions_count));
 
   const getFontSize = (mentions: number) => {
     const normalized = (mentions - minMentions) / (maxMentions - minMentions);
@@ -50,12 +52,16 @@ export function ThemesCloud({ themes }: ThemesCloudProps) {
             whileHover={{ scale: 1.1, opacity: 1 }}
             className="cursor-pointer"
           >
-            <span
-              className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-              style={{ fontSize: `${getFontSize(theme.mentions_count)}px` }}
+            <button
+              onClick={() => onSelect?.(theme.theme_name)}
+              className="font-semibold transition-colors text-left"
+              style={{
+                fontSize: `${getFontSize(theme.mentions_count)}px`,
+                color: getColorForTheme(theme.theme_name),
+              }}
             >
               {theme.theme_name}
-            </span>
+            </button>
             <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">
               ({theme.mentions_count})
             </span>
@@ -65,8 +71,12 @@ export function ThemesCloud({ themes }: ThemesCloudProps) {
 
       <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-600 dark:text-slate-400">Less mentioned</span>
-          <span className="text-slate-600 dark:text-slate-400">Most mentioned</span>
+          <span className="text-slate-600 dark:text-slate-400">
+            Less mentioned
+          </span>
+          <span className="text-slate-600 dark:text-slate-400">
+            Most mentioned
+          </span>
         </div>
       </div>
     </motion.div>
